@@ -70,7 +70,7 @@ p_human_score <- ggplot(human_data_score_plot, aes(x = Group, y = Signature_Scor
   labs(title = "Human: CRL2 Signature Score", y = "Z-score", x = "") +
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face = "bold"))
 
-human_corr_crl2 <- c("ZER1", "CUL2", "RBX1", "ELOC", "ELOB", "TCEB1", "TCEB2")
+human_corr_crl2 <- c("ZER1",......)
 human_corr_markers <- c("NPPA", "NPPB", "MYH7")
 
 human_raw_corr <- data_GSE116250 %>%
@@ -151,25 +151,36 @@ p_mouse_score <- ggplot(mouse_data_score, aes(x = Group, y = Signature_Score)) +
   labs(title = "Mouse: CRL2 Signature Score", y = "Z-score", x = "") +
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face = "bold"))
 
-mouse_corr_target <- "Zer1"
+mouse_corr_crl2 <- c("Zer1", ......)
 mouse_corr_markers <- c("Nppa", "Nppb", "Myh7")
-mouse_all_corr_genes <- c(mouse_corr_target, intersect(mouse_corr_markers, rownames(mouse_expr_matrix)))
 
-mouse_corr_df <- as.data.frame(t(log2(mouse_expr_matrix[mouse_all_corr_genes, ] + 1)))
-mouse_corr_df$Hypertrophy_Score <- rowMeans(
-  scale(mouse_corr_df[, intersect(mouse_corr_markers, colnames(mouse_corr_df))]), na.rm = TRUE
-)
+mouse_valid_crl2 <- intersect(mouse_corr_crl2, rownames(mouse_expr_matrix))
+mouse_valid_markers <- intersect(mouse_corr_markers, rownames(mouse_expr_matrix))
 
-p_mouse_corr <- ggplot(mouse_corr_df, aes_string(x = mouse_corr_target, y = "Hypertrophy_Score")) +
+mouse_genes_for_corr <- c(mouse_valid_crl2, mouse_valid_markers)
+mouse_corr_df <- as.data.frame(t(log2(mouse_expr_matrix[mouse_genes_for_corr, ] + 1)))
+
+if(length(mouse_valid_crl2) > 1) {
+  mouse_corr_df$CRL2_Score <- rowMeans(scale(mouse_corr_df[, mouse_valid_crl2]), na.rm = TRUE)
+} else {
+  mouse_corr_df$CRL2_Score <- as.numeric(scale(mouse_corr_df[, mouse_valid_crl2]))
+}
+
+if(length(mouse_valid_markers) > 1) {
+  mouse_corr_df$Hypertrophy_Score <- rowMeans(scale(mouse_corr_df[, mouse_valid_markers]), na.rm = TRUE)
+} else {
+  mouse_corr_df$Hypertrophy_Score <- as.numeric(scale(mouse_corr_df[, mouse_valid_markers]))
+}
+
+p_mouse_corr <- ggplot(mouse_corr_df, aes(x = CRL2_Score, y = Hypertrophy_Score)) +
   geom_point(fill = "gray60", shape = 21, color = "black", size = 4, stroke = 0.8, alpha = 0.9) +
   geom_smooth(method = "lm", color = "black", fill = "gray40", alpha = 0.2) +
-  stat_cor(method = "pearson", label.x.npc = "center", label.y.npc = "top", size = 5) +
+  stat_cor(method = "pearson", label.x.npc = "center", label.y.npc = "top", size = 6) +
   theme_classic() +
-  labs(title = "Mouse: Zer1-Hypertrophy Correlation", x = paste(mouse_corr_target, "Expression"), 
-       y = "Hypertrophy Score") +
+  labs(title = "Mouse: CRL2-Hypertrophy Correlation", x = "CRL2 Score (Z-score)", 
+       y = "Hypertrophy Score (Z-score)") +
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face = "bold"))
 
-# Venn diagram
 get_circle_pts <- function(cx, cy, r) {
   theta <- seq(0, 2 * pi, length.out = 100)
   data.frame(x = cx + r * cos(theta), y = cy + r * sin(theta))
